@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <math.h>
 #include <LD2450.h>
 #include "config.h"
 
@@ -19,7 +20,14 @@
 #endif
 #endif // !DIAGNOSTIC_MODE
 
-const int ledPin = 2;
+// ESP32-S2/S3/C3 không có Serial2 (chỉ 2-3 UART tuỳ chip, và không cố định
+// chân). ESP32 cổ điển (dual-core, không native USB) mới có Serial2 với
+// chân mặc định 16/17. Macro dưới đây tự chọn đúng UART theo chip đang build.
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3
+#define RADAR_SERIAL Serial1
+#else
+#define RADAR_SERIAL Serial2
+#endif
 
 String last_target_data = "";
 
@@ -96,6 +104,19 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 // module gửi lên trước khi bị parse thành target, hữu ích khi cần xác
 // nhận/định lại format frame trên phần cứng thật.
 // ---------------------------------------------------------------
+// ---------------------------------------------------------------
+// Sửa lỗi giải mã dấu của toạ độ Y (xem giải thích trong config.h).
+// Luôn gọi hàm này để lấy Y thay vì đọc thẳng target.y.
+// ---------------------------------------------------------------
+int32_t fixRadarY(int32_t rawY)
+{
+#if FIX_LD2450_Y_SIGN_BUG
+  return (int32_t)(uint16_t)rawY - 32768;
+#else
+  return rawY;
+#endif
+}
+
 void printRawIfEnabled()
 {
 #if DEBUG_RADAR_RAW
@@ -122,11 +143,14 @@ void setup()
 #endif
 
   ld2450.setNumberOfTargets(3);
-  // SETUP SENSOR USING HARDWARE SERIAL INTERFACE 2
-  ld2450.begin(Serial2, false);
+  // Tự mở UART với chân tường minh (bắt buộc trên ESP32-S2/S3/C3), rồi báo
+  // cho thư viện là đã sẵn sàng (already_initialized = true) để nó không
+  // tự gọi begin() thiếu chân nữa.
+  RADAR_SERIAL.begin(256000, SERIAL_8N1, RADAR_RX_PIN, RADAR_TX_PIN);
+  ld2450.begin(RADAR_SERIAL, true);
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LED_OFF);
 
 #if !DIAGNOSTIC_MODE
   zone1 = false;
@@ -227,7 +251,7 @@ void loop()
 
     if (ld2450.getTarget(0).valid == 0 && ld2450.getTarget(1).valid == 0 && ld2450.getTarget(2).valid == 0)
     {
-      digitalWrite(ledPin, LOW);
+      digitalWrite(LED_PIN, LED_OFF);
 #if !DIAGNOSTIC_MODE
       zone1 = false;
       zone2 = false;
@@ -247,7 +271,7 @@ void loop()
     }
     else
     {
-      digitalWrite(ledPin, HIGH);
+      digitalWrite(LED_PIN, LED_ON);
 #if !DIAGNOSTIC_MODE
       tempZone1 = false;
       tempZone2 = false;
@@ -257,15 +281,17 @@ void loop()
       for (int i = 0; i < ld2450.getSensorSupportedTargetCount(); i++)
       {
         const LD2450::RadarTarget target = ld2450.getTarget(i);
+        int32_t targetY = fixRadarY(target.y);
+        uint32_t targetDistance = (uint32_t)round(sqrt((double)target.x * target.x + (double)targetY * targetY));
         // Add target information to the string
-        last_target_data += "TARGET ID=" + String(i + 1) + " X=" + String((target.x)) + "mm, Y=" + String(target.y) + "mm, SPEED=" + String(target.speed) + "cm/s, RESOLUTION=" + String(target.resolution) + "mm, DISTANCE=" + String(target.distance) + "mm, VALID=" + String(target.valid) + "\n";
+        last_target_data += "TARGET ID=" + String(i + 1) + " X=" + String((target.x)) + "mm, Y=" + String(targetY) + "mm, SPEED=" + String(target.speed) + "cm/s, RESOLUTION=" + String(target.resolution) + "mm, DISTANCE=" + String(targetDistance) + "mm, VALID=" + String(target.valid) + "\n";
 
 #if !DIAGNOSTIC_MODE
         // Send positions via WebSocket
         JSON_DOC(128) doc;
         doc["id"] = i + 1;
         doc["x"] = target.x;
-        doc["y"] = target.y;
+        doc["y"] = targetY;
 
         String jsonString;
         serializeJson(doc, jsonString);
@@ -276,7 +302,7 @@ void loop()
         // Check if target is within any zone
         for (int j = 0; j < 3; j++)
         {
-          if ((target.x) >= zones[j].x1 && (target.x) <= zones[j].x2 && target.y >= zones[j].y1 && target.y <= zones[j].y2)
+          if ((target.x) >= zones[j].x1 && (target.x) <= zones[j].x2 && targetY >= zones[j].y1 && targetY <= zones[j].y2)
           {
             Serial.println("TARGET ID=" + String(i + 1) + " is within ZONE " + String(j + 1));
             switch (j + 1)
@@ -308,12 +334,13 @@ void loop()
   else
   {
     Serial.println("No data received from sensor");
-    Serial2.end();
-    Serial.println("Serial2 closed");
+    RADAR_SERIAL.end();
+    Serial.println("Radar UART closed");
     delay(1500);
     ld2450.setNumberOfTargets(3);
-    ld2450.begin(Serial2, false);
-    Serial.println("Serial2 opened");
+    RADAR_SERIAL.begin(256000, SERIAL_8N1, RADAR_RX_PIN, RADAR_TX_PIN);
+    ld2450.begin(RADAR_SERIAL, true);
+    Serial.println("Radar UART reopened");
     delay(1500);
   }
 
