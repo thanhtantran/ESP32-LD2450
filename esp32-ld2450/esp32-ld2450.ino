@@ -71,17 +71,54 @@ WiFiClient espClient;
 void setup_wifi()
 {
   delay(10);
-  // connecting to a WiFi network
+
+  // Quét trước để xem module có THẤY được mạng đích không (giúp phân biệt
+  // "SSID/mật khẩu sai" với "không thấy sóng gì cả" — trường hợp sau là
+  // vấn đề anten/khoảng cách/băng tần 5GHz, không phải lỗi thông tin WiFi).
   Serial.println();
+  Serial.println("Scanning WiFi networks...");
+  int n = WiFi.scanNetworks();
+  if (n == 0)
+  {
+    Serial.println("=> Khong thay bat ky mang WiFi nao! Kha nang cao la loi anten/RF cua board, khong phai sai SSID/mat khau.");
+  }
+  else
+  {
+    bool foundTarget = false;
+    for (int i = 0; i < n; i++)
+    {
+      Serial.printf("  %d: %s (RSSI %d dBm)%s\n", i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i),
+                    WiFi.SSID(i) == String(ssid) ? "  <-- muc tieu" : "");
+      if (WiFi.SSID(i) == String(ssid))
+        foundTarget = true;
+    }
+    if (!foundTarget)
+    {
+      Serial.println("=> Khong thay dung SSID trong danh sach quet duoc! Kiem tra lai ten mang, hoac mang do la 5GHz (ESP32 khong ho tro 5GHz).");
+    }
+  }
+
+  // connecting to a WiFi network
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
   WiFi.begin(ssid, password);
 
+  int attempts = 0;
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    Serial.print(".");
+    Serial.printf(".[status=%d] ", WiFi.status());
+    attempts++;
+    if (attempts >= 40) // ~20 giây không lên được thì in gợi ý và thử lại từ đầu
+    {
+      Serial.println();
+      Serial.println("Van chua ket noi duoc sau 20s. Ma status() gan nhat da in o tren:");
+      Serial.println("  1=WL_NO_SSID_AVAIL (khong thay SSID - anten/khoang cach/5GHz)");
+      Serial.println("  4=WL_CONNECT_FAILED (thuong la sai mat khau)");
+      Serial.println("  6=WL_DISCONNECTED (dang thu lai)");
+      attempts = 0;
+    }
   }
 
   Serial.println("");
@@ -120,7 +157,7 @@ Adafruit_NeoPixel rgbLed(1, RGB_LED_PIN, NEO_GRB + NEO_KHZ800);
 // ---------------------------------------------------------------
 int32_t fixLD2450Coord(int32_t rawValue)
 {
-#if FIX_LD2450_XY_SIGN_BUG
+#if FIX_LD2450_Y_SIGN_BUG
   return (int32_t)(uint16_t)rawValue - 32768;
 #else
   return rawValue;
@@ -377,17 +414,6 @@ void loop()
       zone1 = false;
       zone2 = false;
       zone3 = false;
-      for (int i = 0; i < ld2450.getSensorSupportedTargetCount(); i++)
-      {
-        JSON_DOC(128) doc;
-        doc["id"] = i + 1;
-        doc["x"] = 0;
-        doc["y"] = 0;
-
-        String jsonString;
-        serializeJson(doc, jsonString);
-        ws.textAll(jsonString); // Send to all connected WebSocket clients
-      }
 #endif
     }
     else
@@ -413,19 +439,6 @@ void loop()
         dispValid[i] = target.valid;
 
 #if !DIAGNOSTIC_MODE
-        // Send positions via WebSocket
-        JSON_DOC(128) doc;
-        doc["id"] = i + 1;
-        doc["x"] = targetX;
-        doc["y"] = targetY;
-
-        String jsonString;
-        serializeJson(doc, jsonString);
-        if (ws.availableForWriteAll())
-        {
-          ws.textAll(jsonString); // Send to all connected WebSocket clients
-        }
-
         // Check if target is within any zone
         for (int j = 0; j < 3; j++)
         {
@@ -458,7 +471,45 @@ void loop()
       Serial.println(last_target_data);
     }
 
-    updateDisplay(dispX, dispY, dispValid);
+#if !DIAGNOSTIC_MODE
+    // Gửi CẢ 3 target trong đúng 1 gói JSON duy nhất (thay vì 3 gói riêng lẻ
+    // trước đây) — client nhận được 1 snapshot đồng nhất của cả khung dữ
+    // liệu radar, thay vì 3 "lát cắt" thời điểm khác nhau gây cảm giác rời
+    // rạc. LƯU Ý: đây là thay đổi định dạng JSON, frontend cần cập nhật lại
+    // cách đọc để khớp field "targets" (mảng) thay vì đọc từng message
+    // {"id":...} riêng lẻ như trước.
+    if (ws.availableForWriteAll())
+    {
+      JSON_DOC(384) doc;
+      JsonArray targetsArray = doc["targets"].to<JsonArray>();
+      for (int i = 0; i < 3; i++)
+      {
+#if ARDUINOJSON_VERSION_MAJOR >= 7
+        JsonObject t = targetsArray.add<JsonObject>();
+#else
+        JsonObject t = targetsArray.createNestedObject();
+#endif
+        t["id"] = i + 1;
+        t["x"] = dispX[i];
+        t["y"] = dispY[i];
+        t["valid"] = dispValid[i];
+      }
+      String jsonString;
+      serializeJson(doc, jsonString);
+      ws.textAll(jsonString);
+    }
+#endif
+
+    // Chỉ vẽ lại màn hình tối đa mỗi DISPLAY_REFRESH_MS (xem config.h), thay
+    // vì vẽ lại toàn bộ ở MỌI lần đọc radar (~10 lần/giây) — việc vẽ lại
+    // dồn dập qua SPI chiếm rất nhiều CPU, làm nghẽn cả WiFi/WebSocket và
+    // chính là nguyên nhân khiến dữ liệu tới client bị trễ/rời rạc.
+    static unsigned long lastDisplayUpdate = 0;
+    if (millis() - lastDisplayUpdate >= DISPLAY_REFRESH_MS)
+    {
+      updateDisplay(dispX, dispY, dispValid);
+      lastDisplayUpdate = millis();
+    }
   }
   else
   {
