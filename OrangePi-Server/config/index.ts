@@ -1,4 +1,4 @@
-const DEFAULT_ESP32_IP = '192.168.178.145'
+const DEFAULT_ESP32_IP = '192.168.88.95'
 
 export const getConfig = (ip: string = DEFAULT_ESP32_IP) => ({
   esp32: {

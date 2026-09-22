@@ -56,7 +56,16 @@ export function InteractiveRoomEsp32() {
   const colors = config.zones.colors
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected')
   
-  const { points} = useWebSocket(config.esp32.webSocketUrl)
+  const { points, logs, clearLogs } = useWebSocket(config.esp32.webSocketUrl)
+  const [showLogs, setShowLogs] = useState(false)
+  const [autoScroll, setAutoScroll] = useState(true)
+  const logContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (autoScroll && logContainerRef.current) {
+      logContainerRef.current.scrollTop = 0
+    }
+  }, [logs, autoScroll])
 
   const handleIpChange = (value: string) => {
     if (value === 'custom') {
@@ -214,7 +223,7 @@ export function InteractiveRoomEsp32() {
 
   return (
     <div className="select-none flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-      <h1 className="text-2xl font-bold mb-4">Zonex Presence Detection App</h1>
+      <h1 className="text-2xl font-bold mb-4">LD2450 Detection App</h1>
       
       <div className="flex items-center space-x-2 mb-4">
         {currentIp === 'custom' ? (
@@ -328,7 +337,7 @@ export function InteractiveRoomEsp32() {
             : "Maximum number of zones reached. Delete a zone to create a new one."
           : "Edit mode is off. Toggle edit mode to make changes."}
       </p>
-      <div className="flex space-x-2 min-h-[5rem]">
+      <div className="flex space-x-2 min-h-[5rem] items-center">
       {isEditMode && (
         <>
         <Button onClick={createNewZone} className="mt-4">
@@ -337,8 +346,78 @@ export function InteractiveRoomEsp32() {
         <Button onClick={resetZones} className="mt-4">
             Reset Zones
         </Button></>
-      )} 
+      )}
+        <Button
+          onClick={() => setShowLogs(!showLogs)}
+          variant="outline"
+          className="mt-4"
+        >
+          {showLogs ? 'Hide Logs' : 'Show Logs'} ({logs.length})
+        </Button>
       </div>
+
+      {showLogs && (
+        <div className="w-full max-w-4xl mt-4 bg-gray-900 rounded-lg overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+            <div className="flex items-center space-x-4">
+              <span className="text-green-400 text-sm font-mono font-bold">WS Log Stream</span>
+              <span className="text-gray-400 text-xs font-mono">
+                {logs.length} / 100 messages
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <label className="flex items-center space-x-2 text-gray-300 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoScroll}
+                  onChange={(e) => setAutoScroll(e.target.checked)}
+                  className="w-3 h-3"
+                />
+                <span>Auto-scroll</span>
+              </label>
+              <Button
+                onClick={clearLogs}
+                size="sm"
+                variant="destructive"
+                className="h-7 px-3 text-xs"
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+          <div
+            ref={logContainerRef}
+            className="h-80 overflow-y-auto font-mono text-xs p-3 space-y-1"
+            style={{ scrollBehavior: autoScroll ? 'auto' : 'smooth' }}
+          >
+            {logs.length === 0 ? (
+              <div className="text-gray-500 text-center py-8">
+                No WebSocket messages received yet...
+              </div>
+            ) : (
+              logs.map((log, index) => {
+                const validCount = log.parsedData?.targets
+                  ? log.parsedData.targets.filter((t) => t.valid === 1).length
+                  : 0
+                return (
+                  <div
+                    key={`${log.timestamp}-${index}`}
+                    className={`${
+                      validCount > 0
+                        ? 'text-green-300'
+                        : 'text-gray-500'
+                    } leading-relaxed break-all hover:bg-gray-800 px-1 py-0.5 rounded`}
+                  >
+                    <span className="text-yellow-500">{log.timestamp}</span>
+                    <span className="text-gray-400"> </span>
+                    <span>{log.rawMessage}</span>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
