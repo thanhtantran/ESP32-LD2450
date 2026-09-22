@@ -6,7 +6,7 @@
 // 1 = print every raw UART frame candidate as hex on the Serial
 //     Monitor (115200). Use this to capture real traffic from the
 //     module so the frame format can be confirmed/reverse-engineered.
-#define DEBUG_RADAR_RAW 0
+#define DEBUG_RADAR_RAW 1
 
 // 1 = diagnostic mode only: Serial-only target printout, no Wi-Fi,
 //     no web server, no WebSocket (màn hình LCD vẫn chạy ở cả 2 mode).
