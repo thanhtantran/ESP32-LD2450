@@ -3,18 +3,10 @@
 import { useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { X, Move } from 'lucide-react'
+import type { Zone } from '@/types'
 
 const mapCoordinate = (value: number, inMin: number, inMax: number, outMin: number, outMax: number) => {
   return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
-}
-
-interface Zone {
-  id: number
-  x1: number
-  y1: number
-  x2: number
-  y2: number
-  color: string
 }
 
 export const MoveableResizableZone = ({ zone, onResize, onMove, onDelete, isEditMode, roomWidth, roomHeight }: { 
@@ -191,46 +183,48 @@ export const MoveableResizableZone = ({ zone, onResize, onMove, onDelete, isEdit
   return (
     <div
       ref={zoneRef}
-      className={`absolute border-2 border-blue-400`}
+      className={`absolute border-2 border-blue-400/80 dark:border-blue-400 rounded-md shadow-[0_0_20px_rgba(59,130,246,0.15)] bg-blue-500/[0.04] backdrop-blur-[1px]`}
       style={zoneStyle}
       onClick={(e) => e.stopPropagation()}
     >
       {isEditMode ? (
       <>
-      <div className="absolute top-0 left-0 text-xs px-1">{zone.id}</div>
+      <div className="absolute top-0 left-0 text-xs font-semibold px-1.5 py-0.5 rounded-br-md bg-blue-500/90 text-white shadow-sm">
+        {zone.id}
+      </div>
       <div
       ref={moveRef}
-      className="absolute top-1/2 left-1/2 w-full h-full cursor-move flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 bg-white opacity-50"
+      className="absolute top-1/2 left-1/2 w-full h-full cursor-move flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 bg-background/30 dark:bg-slate-950/30"
       >
-      <Move className="w-4 h-4 text-gray-600" />
+      <Move className="w-5 h-5 text-blue-600 dark:text-blue-300 drop-shadow-sm" />
       </div>
       <div
       ref={resizeRefs.top}
-      className="absolute left-1/2 w-8 h-3 bg-white border-2 border-gray-400 cursor-n-resize transform -translate-x-1/2 -top-[7px] rounded-full"
+      className="absolute left-1/2 w-8 h-3 bg-card border-2 border-blue-500/80 shadow-sm cursor-n-resize transform -translate-x-1/2 -top-[7px] rounded-full"
       />
       <div
       ref={resizeRefs.right}
-      className="absolute top-1/2 w-3 h-8 bg-white border-2 border-gray-400 cursor-e-resize transform -translate-y-1/2 -right-[7px] rounded-full"
+      className="absolute top-1/2 w-3 h-8 bg-card border-2 border-blue-500/80 shadow-sm cursor-e-resize transform -translate-y-1/2 -right-[7px] rounded-full"
       />
       <div
       ref={resizeRefs.bottom}
-      className="absolute left-1/2 w-8 h-3 bg-white border-2 border-gray-400 cursor-s-resize transform -translate-x-1/2 -bottom-[7px] rounded-full"
+      className="absolute left-1/2 w-8 h-3 bg-card border-2 border-blue-500/80 shadow-sm cursor-s-resize transform -translate-x-1/2 -bottom-[7px] rounded-full"
       />
       <div
       ref={resizeRefs.left}
-      className="absolute top-1/2 w-3 h-8 bg-white border-2 border-gray-400 cursor-w-resize transform -translate-y-1/2 -left-[7px] rounded-full"
+      className="absolute top-1/2 w-3 h-8 bg-card border-2 border-blue-500/80 shadow-sm cursor-w-resize transform -translate-y-1/2 -left-[7px] rounded-full"
       />
       <Button
       variant="ghost"
       size="icon"
-      className="absolute top-0 right-0 text-gray-500 hover:text-gray-700 hover:bg-transparent"
+      className="absolute top-0 right-0 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10 dark:hover:text-red-400 rounded-md"
       onClick={handleDeleteClick}
       >
       <X className="h-4 w-4" />
       </Button>
       </>
       ) : (
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xl opacity-40">
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-black opacity-20 dark:opacity-15 text-blue-700 dark:text-blue-200 select-none pointer-events-none">
       {zone.id}
       </div>
       )}
