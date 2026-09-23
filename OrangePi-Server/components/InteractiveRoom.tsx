@@ -130,11 +130,20 @@ export function InteractiveRoomEsp32() {
     return () => window.removeEventListener('resize', updateRoomSize)
   }, [])
 
+  const zoneFetchAbortRef = useRef<AbortController | null>(null)
+
   useEffect(() => {
+    const ZONE_REFRESH_MS = 5 * 60 * 1000
+
     const fetchZones = async () => {
+      zoneFetchAbortRef.current?.abort()
+      const ac = new AbortController()
+      zoneFetchAbortRef.current = ac
+
       try {
         const response = await fetch('/api/zones', {
-          headers: { 'x-esp32-ip': currentIp }
+          headers: { 'x-esp32-ip': currentIp },
+          signal: ac.signal,
         })
         if (response.ok) {
           const data = await response.json()
@@ -148,6 +157,7 @@ export function InteractiveRoomEsp32() {
           throw new Error('Connection failed')
         }
       } catch (error) {
+        if ((error as Error).name === 'AbortError') return
         console.error('Failed to fetch zones:', error)
         setZones([])
         setConnectionStatus('disconnected')
@@ -155,6 +165,12 @@ export function InteractiveRoomEsp32() {
     }
 
     fetchZones()
+    const intervalId = setInterval(fetchZones, ZONE_REFRESH_MS)
+
+    return () => {
+      clearInterval(intervalId)
+      zoneFetchAbortRef.current?.abort()
+    }
   }, [currentIp, colors])
 
   const createNewZone = () => {
@@ -390,11 +406,11 @@ export function InteractiveRoomEsp32() {
         </div>
 
         {/* Main 2-col layout on lg+, stacked on mobile */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 items-stretch">
           {/* LEFT: Radar Room */}
-          <section className="lg:col-span-3 flex flex-col gap-3 sm:gap-4">
-            <div className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30">
+          <section className="lg:col-span-3 flex flex-col gap-3 sm:gap-4 min-h-0">
+            <div className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30 shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
                     <Radar className="h-4 w-4" />
@@ -414,10 +430,10 @@ export function InteractiveRoomEsp32() {
                   </span>
                 </div>
               </div>
-              <div className="p-3 sm:p-5">
+              <div className="flex-1 p-3 sm:p-5 min-h-0 flex">
                 <div
                   ref={roomRef}
-                  className={`w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-[4/3] relative rounded-xl overflow-hidden border-2 transition-all
+                  className={`w-full h-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-auto lg:min-h-0 relative rounded-xl overflow-hidden border-2 transition-all
                     ${isEditMode
                       ? 'border-amber-400/50 ring-2 ring-amber-400/20 cursor-crosshair'
                       : 'border-emerald-500/20 dark:border-emerald-500/30 cursor-default'
@@ -477,7 +493,7 @@ export function InteractiveRoomEsp32() {
                   </div>
                 </div>
               </div>
-              <div className="px-4 py-2.5 border-t border-border/50 bg-muted/20">
+              <div className="px-4 py-2.5 border-t border-border/50 bg-muted/20 shrink-0">
                 <p className="text-xs text-muted-foreground text-center">
                   {isEditMode
                     ? zones.length < 3
@@ -490,10 +506,10 @@ export function InteractiveRoomEsp32() {
           </section>
 
           {/* RIGHT: Log Panel */}
-          <section className="lg:col-span-2 flex flex-col gap-3 sm:gap-4">
+          <section className="lg:col-span-2 flex flex-col gap-3 sm:gap-4 min-h-0">
             <div className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
               <div
-                className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30 cursor-pointer select-none"
+                className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30 cursor-pointer select-none shrink-0"
                 onClick={() => setLogCollapsed(!logCollapsed)}
               >
                 <div className="flex items-center gap-2">
@@ -540,8 +556,8 @@ export function InteractiveRoomEsp32() {
               {!logCollapsed && (
                 <div
                   ref={logContainerRef}
-                  className="flex-1 h-[380px] sm:h-[450px] lg:h-[520px] overflow-y-auto bg-slate-950 dark:bg-black p-3 font-mono text-[11px] leading-relaxed space-y-0.5"
-                  style={{ scrollBehavior: autoScroll ? 'auto' : 'smooth' }}
+                  className="flex-1 min-h-0 overflow-y-auto bg-slate-950 dark:bg-black p-3 font-mono text-[11px] leading-relaxed space-y-0.5"
+                  style={{ scrollBehavior: 'smooth' }}
                 >
                   {logs.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-slate-500 text-xs">
