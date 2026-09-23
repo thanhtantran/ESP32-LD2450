@@ -6,6 +6,8 @@ A modern, responsive Web dashboard for monitoring **HLK-LD2450 mmWave Human Pres
 
 Built with **Next.js 14 (App Router)**, **React 18**, **TypeScript**, **Tailwind CSS**, and **shadcn/ui**.
 
+![UI Screenshot](/ui.png)
+
 ---
 
 ## ✨ Features

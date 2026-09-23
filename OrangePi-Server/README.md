@@ -6,6 +6,8 @@ Bảng điều khiển Web hiện đại, responsive để giám sát **Cảm bi
 
 Được xây dựng với **Next.js 14 (App Router)**, **React 18**, **TypeScript**, **Tailwind CSS** và **shadcn/ui**.
 
+![Hình ảnh giao diện](/ui.png)
+
 ---
 
 ## ✨ Tính năng
