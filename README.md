@@ -1,4 +1,4 @@
-# Hệ thống Phát hiện Vùng có Mặt người dùng Radar HLK-LD2450
+# Hệ thống Phát hiện Vùng có người dùng Radar HLK-LD2450
 
 > 🌐 **Read this document in English:** [README-en.md](README-en.md)
 
