@@ -1,100 +1,102 @@
-# Zone Presence Detection System with HLK-LD2450 Radar
+# Hệ thống Phát hiện Vùng có Mặt người dùng Radar HLK-LD2450
+
+> 🌐 **Read this document in English:** [README-en.md](README-en.md)
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-GPLv3-green.svg)
 ![ESP32](https://img.shields.io/badge/ESP32-Ready-blue)
 ![React](https://img.shields.io/badge/React-18-61dafb)
 
-![alt text](/ui.png) 
+![Hình ảnh giao diện](/ui.png)
 
-## 📋 Table of Contents
-- [Features](#-features)
-- [System Architecture](#-system-architecture)
-- [Hardware Setup](#-hardware-setup)
-- [Installation](#%EF%B8%8F-installation)
-- [Usage Guide](#-usage-guide)
-- [Technical Specifications](#-technical-specifications)
-- [API Documentation](#-api-documentation)
-- [License](#-license)
+## 📋 Mục lục
+- [Tính năng](#-tính-năng)
+- [Kiến trúc Hệ thống](#-kiến-trúc-hệ-thống)
+- [Thiết lập Phần cứng](#-thiết-lập-phần-cứng)
+- [Cài đặt](#️-cài-đặt)
+- [Hướng dẫn Sử dụng](#-hướng-dẫn-sử-dụng)
+- [Thông số Kỹ thuật](#-thông-số-kỹ-thuật)
+- [Tài liệu API](#-tài-liệu-api)
+- [Bản quyền](#-bản-quyền)
 
-## 🌟 Features
+## 🌟 Tính năng
 
-### Radar Capabilities
-- High-precision 24GHz mmWave radar technology
-- Real-time tracking of up to 3 targets simultaneously
-- Detection range: 6 meters
-- Millimeter-level position accuracy
-- Non-intrusive presence detection
+### Khả năng Radar
+- Công nghệ radar mmWave 24GHz độ chính xác cao
+- Theo dõi thời gian thực lên đến 3 mục tiêu cùng lúc
+- Phạm vi phát hiện: 6 mét
+- Độ chính xác vị trí cấp milimét
+- Phát hiện sự hiện diện không xâm phạm quyền riêng tư (không dùng camera)
 
-### Interactive Web Interface
-- Real-time position visualization
-- Drag-and-drop zone configuration
-- Mobile-responsive design
-- Live target tracking display
-- Visual connection status indicator
-- Zone occupancy feedback
+### Giao diện Web Tương tác
+- Hiển thị vị trí thời gian thực
+- Cấu hình vùng kéo-thả (drag-and-drop)
+- Thiết kế responsive trên di động
+- Hiển thị theo dõi mục tiêu trực tiếp
+- Chỉ báo trạng thái kết nối trực quan
+- Phản hồi tình trạng chiếm dụng vùng
 
-### Smart Zone Management
-- Create up to 3 customizable detection zones
-- Visual zone editing tools
-- Zone persistence across sessions
-- Real-time zone validation
-- Automatic coordinate mapping
+### Quản lý Vùng Thông minh
+- Tạo tối đa 3 vùng phát hiện tùy chỉnh
+- Công cụ chỉnh sửa vùng trực quan
+- Vùng được lưu lại giữa các phiên
+- Kiểm tra hợp lệ vùng thời gian thực
+- Tự động ánh xạ tọa độ
 
-### Communication
-- WebSocket-based real-time updates
-- RESTful API for zone configuration
-- Robust error handling
-- Automatic reconnection
-- Secure data transmission
+### Giao tiếp
+- Cập nhật thời gian thực dựa trên WebSocket
+- RESTful API cho cấu hình vùng
+- Xử lý lỗi vững chắc
+- Tự động kết nối lại
+- Truyền dữ liệu an toàn
 
-## 🏗 System Architecture
+## 🏗 Kiến trúc Hệ thống
 
-### Hardware Layer
-- **HLK-LD2450 Radar Sensor**
-  - 24GHz mmWave technology
-  - Serial communication interface
-  - Built-in target tracking algorithms
-  - Low power consumption
+### Lớp Phần cứng
+- **Cảm biến Radar HLK-LD2450**
+  - Công nghệ mmWave 24GHz
+  - Giao diện giao tiếp nối tiếp (Serial)
+  - Thuật toán theo dõi mục tiêu tích hợp
+  - Tiêu thụ điện năng thấp
 
-- **ESP32 Controller**
-  - Dual-core processor
-  - WebSocket server
-  - REST API endpoint
-  - WiFi connectivity
-  - Serial communication handler
+- **Bộ điều khiển ESP32**
+  - Bộ xử lý nhân đôi (Dual-core)
+  - Máy chủ WebSocket
+  - Endpoint REST API
+  - Kết nối WiFi
+  - Bộ xử lý giao tiếp Serial
 
-### Software Layer
-- **ESP32 Firmware**
-  - FreeRTOS task management
-  - WebSocket server implementation
-  - JSON data processing
-  - Zone calculation algorithms
+### Lớp Phần mềm
+- **Phần mềm (Firmware) ESP32**
+  - Quản lý tác vụ FreeRTOS
+  - Triển khai WebSocket server
+  - Xử lý dữ liệu JSON
+  - Thuật toán tính toán vùng
 
-- **React Web Application**
-  - Modern React 18 with hooks
-  - Real-time WebSocket client
-  - Interactive zone editor
-  - Responsive design system
-  - Error boundary implementation
+- **Ứng dụng Web React**
+  - React 18 hiện đại với hooks
+  - Client WebSocket thời gian thực
+  - Trình soạn thảo vùng tương tác
+  - Hệ thống thiết kế responsive
+  - Triển khai Error boundary
 
-### Data Flow
-1. Radar sensor captures position data
-2. ESP32 processes and validates data
-3. Zone presence is calculated
-4. Data is streamed via WebSocket
-5. Web interface updates in real-time
+### Luồng Dữ liệu
+1. Cảm biến radar thu thập dữ liệu vị trí
+2. ESP32 xử lý và xác nhận hợp lệ dữ liệu
+3. Tính toán hiện diện vùng
+4. Dữ liệu được truyền trực tiếp qua WebSocket
+5. Giao diện Web cập nhật thời gian thực
 
-## 🔧 Hardware Setup
+## 🔧 Thiết lập Phần cứng
 
-### Components List
-- HLK-LD2450 24GHz radar sensor
-- ESP32 development board
-- USB-C power supply (5V)
-- Jumper wires
-- Optional: 3D printed case
+### Danh sách Linh kiện
+- Cảm biến radar 24GHz HLK-LD2450
+- Board phát triển ESP32
+- Nguồn cấp USB-C (5V)
+- Dây nối jumper
+- Tùy chọn: Vỏ in 3D
 
-### Wiring Diagram
+### Sơ đồ Nối dây
 ```
 HLK-LD2450  |  ESP32-WROOM
 ---------------------------
@@ -104,99 +106,99 @@ HLK-LD2450  |  ESP32-WROOM
      RX     |  GPIO17 (TX2)
 ```
 
-### Mounting Recommendations
-- Mount radar sensor at 1.2-1.5m height
-- Ensure clear line of sight
-- Avoid metal obstacles
-- Keep away from WiFi antennas
+### Khuyến nghị Lắp đặt
+- Gắn cảm biến radar ở độ cao 1,2-1,5m
+- Đảm bảo tầm nhìn không bị cản trở
+- Tránh các chướng ngại vật bằng kim loại
+- Đặt xa khỏi ăng-ten WiFi
 
-## ⚙️ Installation
+## ⚙️ Cài đặt
 
-### ESP32 Development Setup
-1. Install Arduino IDE
-2. Install HLK-LD2450 lib
-3. Clone repository:
+### Chuẩn bị Môi trường Phát triển ESP32
+1. Cài đặt Arduino IDE
+2. Cài đặt thư viện HLK-LD2450
+3. Clone kho mã nguồn:
    ```bash
    git clone https://github.com/thanhtantran/ESP32-LD2450.git
    ```
-4. Configure WiFi credentials:
+4. Cấu hình thông tin đăng nhập WiFi:
    ```cpp
    // WiFiCredentials.h
-   #define WIFI_SSID "your_ssid"
-   #define WIFI_PASSWORD "your_password"
+   #define WIFI_SSID "tên_mạng_wifi_của_bạn"
+   #define WIFI_PASSWORD "mật_khẩu_wifi_của_bạn"
    ```
-5. Build and flash the ESP32 with Arduino IDE
+5. Biên dịch và nạp chương trình vào ESP32 bằng Arduino IDE
 
-### Web Application Setup
+### Cài đặt Ứng dụng Web
 
-Install manually:
+Cài đặt thủ công:
 
-1. Install Node.js (v16+)
-2. Navigate to web app directory:
+1. Cài đặt Node.js (phiên bản v16 trở lên)
+2. Di chuyển vào thư mục web app:
    ```bash
    cd OrangePi-Server/
    ```
-3. Install dependencies:
+3. Cài đặt các gói phụ thuộc:
    ```bash
    npm install
-   ``` 
-4. Start development server:
+   ```
+4. Khởi động development server:
    ```bash
    npm run dev
    ```
 
-## 🎯 Usage Guide
+## 🎯 Hướng dẫn Sử dụng
 
-### Initial Setup
-1. Power up ESP32
-2. Note the ESP32's IP address from Serial Monitor output
-3. Open web interface at http://localhost:3000
-4. Configure the IP address in the web application
+### Chuẩn bị Ban đầu
+1. Cấp nguồn cho ESP32
+2. Ghi lại địa chỉ IP của ESP32 từ đầu ra Serial Monitor
+3. Mở giao diện Web tại địa chỉ http://localhost:3000
+4. Cấu hình địa chỉ IP trong ứng dụng Web
 
-### Zone Configuration
-1. Enable "Edit Mode"
-2. Click "New Zone" to create zone
-3. Drag to position
-4. Use handles to resize
-5. Save configuration by switching "Edit Mode"
+### Cấu hình Vùng
+1. Bật "Edit Mode" (Chế độ Chỉnh sửa)
+2. Nhấn "New Zone" để tạo vùng mới
+3. Kéo để đặt vị trí vùng
+4. Sử dụng các núm điều chỉnh (handles) để thay đổi kích thước
+5. Lưu cấu hình bằng cách tắt "Edit Mode"
 
-### Real-time Monitoring
-- View live target positions
-- Monitor zone occupancy
-- Check connection status
-- View target trajectories
+### Giám sát Thời gian Thực
+- Xem vị trí mục tiêu trực tiếp
+- Giám sát tình trạng chiếm dụng vùng
+- Kiểm tra trạng thái kết nối
+- Xem quỹ đạo di chuyển của mục tiêu
 
-## 🔍 Technical Specifications
+## 🔍 Thông số Kỹ thuật
 
-### Radar Parameters
-- Frequency: 24GHz
-- Range: 6m
-- Update rate: 20Hz
-- Resolution: 1mm
-- Field of view: 120°
+### Thông số Radar
+- Tần số: 24GHz
+- Phạm vi: 6m
+- Tốc độ cập nhật: 20Hz
+- Độ phân giải: 1mm
+- Góc nhìn trường nhìn: 120°
 
-### Zone Configuration
-- Maximum zones: 3
-- X range: -4000 to 4000mm
-- Y range: 1 to 6000mm
-- Minimum size: 20x20mm
-- Maximum size: 8000x6000mm
+### Cấu hình Vùng
+- Số vùng tối đa: 3
+- Khoảng X: -4000 đến 4000mm
+- Khoảng Y: 1 đến 6000mm
+- Kích thước tối thiểu: 20x20mm
+- Kích thước tối đa: 8000x6000mm
 
-## 📡 API Documentation
+## 📡 Tài liệu API
 
-### WebSocket Endpoint
-- URL: `ws://<ESP32_IP>/ws`
-- Protocol: WebSocket
-- Format: JSON
+### Endpoint WebSocket
+- URL: `ws://<IP_ESP32>/ws`
+- Giao thức: WebSocket
+- Định dạng: JSON
 
-### REST Endpoints
-- Zone Configuration:
+### Endpoint REST
+- Cấu hình Vùng:
   ```
-  GET  /zones          // Fetch zones
-  POST /updateZones    // Update zones
+  GET  /zones          // Lấy danh sách vùng
+  POST /updateZones    // Cập nhật danh sách vùng
   ```
 
-### Data Formats
+### Định dạng Dữ liệu
 ```json
 {
   "zones": [
@@ -211,6 +213,7 @@ Install manually:
 }
 ```
 
-## 📄 License
-
-This project is licensed under the © GPL3+ License - see the [LICENSE](LICENSE) file for details.
+## 📄 Bản quyền
+Mã nguồn này dựa trên kho mã gốc: https://github.com/nick28s/IoTProject-ZonePresenceDetection-LD2450/
+Cùng loại giấy phép với kho mã gốc.
+Dự án này được cấp phép theo © Giấy phép GPL3+ - xem chi tiết trong file [LICENSE](LICENSE).
