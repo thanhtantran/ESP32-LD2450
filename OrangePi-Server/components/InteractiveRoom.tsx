@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -69,12 +69,17 @@ export function InteractiveRoomEsp32() {
   }, [savedIps, mounted])
 
   const roomRef = useRef<HTMLDivElement>(null)
+  const radarCardRef = useRef<HTMLDivElement>(null)
+  const logCardRef = useRef<HTMLDivElement>(null)
   const [roomSize, setRoomSize] = useState({ width: 0, height: 0 })
-  const config = getConfig(currentIp)
-  const colors = config.zones.colors
+  const [radarCardHeight, setRadarCardHeight] = useState<number | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected')
 
-  const { points, logs, clearLogs, isConnected: wsConnected } = useWebSocket(config.esp32.webSocketUrl)
+  const config = useMemo(() => getConfig(currentIp), [currentIp])
+  const colors = config.zones.colors
+  const webSocketUrl = config.esp32.webSocketUrl
+
+  const { points, logs, clearLogs, isConnected: wsConnected } = useWebSocket(webSocketUrl)
   const [autoScroll, setAutoScroll] = useState(true)
   const [logCollapsed, setLogCollapsed] = useState(false)
   const logContainerRef = useRef<HTMLDivElement>(null)
@@ -116,41 +121,73 @@ export function InteractiveRoomEsp32() {
   }
 
   useEffect(() => {
+    let cancelled = false
     const updateRoomSize = () => {
+      if (cancelled) return
       if (roomRef.current) {
         setRoomSize({
           width: roomRef.current.offsetWidth,
           height: roomRef.current.offsetHeight
         })
       }
+      if (radarCardRef.current) {
+        setRadarCardHeight(radarCardRef.current.offsetHeight)
+      }
     }
 
     updateRoomSize()
     window.addEventListener('resize', updateRoomSize)
-    return () => window.removeEventListener('resize', updateRoomSize)
+
+    let ro: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined' && radarCardRef.current) {
+      ro = new ResizeObserver(() => {
+        if (cancelled) return
+        if (radarCardRef.current) {
+          setRadarCardHeight(radarCardRef.current.offsetHeight)
+        }
+        if (roomRef.current) {
+          setRoomSize({
+            width: roomRef.current.offsetWidth,
+            height: roomRef.current.offsetHeight,
+          })
+        }
+      })
+      ro.observe(radarCardRef.current)
+    }
+
+    return () => {
+      cancelled = true
+      window.removeEventListener('resize', updateRoomSize)
+      if (ro) ro.disconnect()
+    }
   }, [])
 
   const zoneFetchAbortRef = useRef<AbortController | null>(null)
+  const colorsRef = useRef<string[]>(colors)
+  useEffect(() => { colorsRef.current = colors }, [colors])
 
   useEffect(() => {
     const ZONE_REFRESH_MS = 5 * 60 * 1000
 
     const fetchZones = async () => {
+      if (currentIp === 'custom') return
       zoneFetchAbortRef.current?.abort()
       const ac = new AbortController()
       zoneFetchAbortRef.current = ac
+      const colorPalette = colorsRef.current
 
       try {
         const response = await fetch('/api/zones', {
           headers: { 'x-esp32-ip': currentIp },
           signal: ac.signal,
+          cache: 'no-store',
         })
         if (response.ok) {
           const data = await response.json()
           setZones(data.map((zone: Zone, index: number) => ({
             ...zone,
             id: index + 1,
-            color: colors[index % colors.length],
+            color: colorPalette[index % colorPalette.length],
           })))
           setConnectionStatus('connected')
         } else {
@@ -171,7 +208,7 @@ export function InteractiveRoomEsp32() {
       clearInterval(intervalId)
       zoneFetchAbortRef.current?.abort()
     }
-  }, [currentIp, colors])
+  }, [currentIp])
 
   const createNewZone = () => {
     if (roomRef.current && zones.length < 3) {
@@ -406,10 +443,10 @@ export function InteractiveRoomEsp32() {
         </div>
 
         {/* Main 2-col layout on lg+, stacked on mobile */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
           {/* LEFT: Radar Room */}
           <section className="lg:col-span-3 flex flex-col gap-3 sm:gap-4 min-h-0">
-            <div className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+            <div ref={radarCardRef} className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30 shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
@@ -430,10 +467,10 @@ export function InteractiveRoomEsp32() {
                   </span>
                 </div>
               </div>
-              <div className="flex-1 p-3 sm:p-5 min-h-0 flex">
+              <div className="p-3 sm:p-5">
                 <div
                   ref={roomRef}
-                  className={`w-full h-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-auto lg:min-h-0 relative rounded-xl overflow-hidden border-2 transition-all
+                  className={`w-full aspect-[4/3] sm:aspect-[16/10] relative rounded-xl overflow-hidden border-2 transition-all
                     ${isEditMode
                       ? 'border-amber-400/50 ring-2 ring-amber-400/20 cursor-crosshair'
                       : 'border-emerald-500/20 dark:border-emerald-500/30 cursor-default'
@@ -507,7 +544,11 @@ export function InteractiveRoomEsp32() {
 
           {/* RIGHT: Log Panel */}
           <section className="lg:col-span-2 flex flex-col gap-3 sm:gap-4 min-h-0">
-            <div className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+            <div
+              ref={logCardRef}
+              className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col min-h-0"
+              style={radarCardHeight !== null ? { height: `${radarCardHeight}px`, maxHeight: `${radarCardHeight}px` } : undefined}
+            >
               <div
                 className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30 cursor-pointer select-none shrink-0"
                 onClick={() => setLogCollapsed(!logCollapsed)}
@@ -556,7 +597,7 @@ export function InteractiveRoomEsp32() {
               {!logCollapsed && (
                 <div
                   ref={logContainerRef}
-                  className="flex-1 min-h-0 overflow-y-auto bg-slate-950 dark:bg-black p-3 font-mono text-[11px] leading-relaxed space-y-0.5"
+                  className="flex-1 h-0 min-h-0 overflow-y-auto bg-slate-950 dark:bg-black p-3 font-mono text-[11px] leading-relaxed space-y-0.5"
                   style={{ scrollBehavior: 'smooth' }}
                 >
                   {logs.length === 0 ? (
@@ -582,7 +623,7 @@ export function InteractiveRoomEsp32() {
                 </div>
               )}
 
-              <div className="sm:hidden px-3 py-2 border-t border-border/50 bg-muted/20 flex items-center justify-between">
+              <div className="sm:hidden px-3 py-2 border-t border-border/50 bg-muted/20 flex items-center justify-between shrink-0">
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                   <input
                     type="checkbox"
