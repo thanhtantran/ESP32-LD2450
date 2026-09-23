@@ -560,7 +560,7 @@ export function InteractiveRoomEsp32() {
                   <div>
                     <h2 className="text-sm font-semibold">WS Log Stream</h2>
                     <p className="text-[10px] text-muted-foreground font-mono">
-                      {logs.length} / 100 messages · {validTargetLogs} valid events
+                      {logs.length} / 500 messages · {validTargetLogs} valid events
                     </p>
                   </div>
                 </div>
