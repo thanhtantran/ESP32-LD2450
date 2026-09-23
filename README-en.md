@@ -338,7 +338,7 @@ POST /api/zones                         body: { zones: [...] }
 
 ### Credits
 - **Được tạo ra với ❤ bởi [Tony Trần](https://tony.id.vn)**
-- Hợp tác cùng **[Orange Pi Việt Nam](https://orangepi.vn)**
+- Hợp tác cùng **[Orange Pi Việt Nam](https://orangepi.vn)** và **[ESP32 Việt Nam](https://esp32.vn)**
 - Dựa trên kho mã gốc: [nick28s/IoTProject-ZonePresenceDetection-LD2450](https://github.com/nick28s/IoTProject-ZonePresenceDetection-LD2450/)
 
 ### License
